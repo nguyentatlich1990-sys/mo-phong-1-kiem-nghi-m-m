@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mô phỏng 1: Kiểm nghiệm ngưỡng độ ẩm & Quy tắc Nếu – Thì</title>
+    <!-- Tải Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font chữ Inter hỗ trợ tiếng Việt sắc nét -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9;
+            color: #0f172a;
+        }
+        /* Tùy chỉnh thanh trượt cho dễ thao tác trên màn hình tương tác và điện thoại */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 8px;
+            border-radius: 999px;
+            background: #cbd5e1;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #0284c7;
+            cursor: pointer;
+            border: 3px solid #ffffff;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
+            transition: transform 0.1s ease;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+        /* Hiệu ứng nước chảy trong ống */
+        @keyframes flowWater {
+            0% { stroke-dashoffset: 24; }
+            100% { stroke-dashoffset: 0; }
+        }
+        .water-flowing {
+            stroke-dasharray: 8 4;
+            animation: flowWater 0.5s linear infinite;
+        }
+        /* Hiệu ứng giọt nước rơi */
+        @keyframes dropFall {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(28px); opacity: 0; }
+        }
+        .water-drop {
+            animation: dropFall 0.6s ease-in infinite;
+        }
+        .water-drop-delay {
+            animation: dropFall 0.6s ease-in 0.3s infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Header Banner Chuẩn Giáo Dục STEM -->
+    <header class="bg-gradient-to-r from-emerald-700 via-teal-700 to-sky-700 text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+                <div class="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold tracking-wide uppercase mb-1">
+                    <span>🌱 Chủ đề STEM Toán 8 • "Bao nhiêu nước là đủ?"</span>
+                </div>
+                <h1 class="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight">
+                    MÔ PHỎNG 1: KIỂM NGHIỆM NGƯỠNG ĐỘ ẨM &amp; QUY TẮC NẾU – THÌ
+                </h1>
+                <p class="text-emerald-100 text-xs sm:text-sm mt-0.5">
+                    Mô hình hóa toán học bất phương trình điều kiện và tối ưu hóa lượng nước tưới cây xanh
+                </p>
+            </div>
+            <!-- Nút điều khiển nhanh chế độ chạy -->
+            <div class="flex flex-wrap items-center gap-2 bg-slate-900/25 p-2 rounded-2xl border border-white/15">
+                <button id="btnToggleAuto" class="flex items-center gap-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold px-4 py-2 rounded-xl shadow transition text-sm">
+                    <span id="autoIcon">▶️</span>
+                    <span id="autoText">Chạy tự động (Bốc hơi thực tế)</span>
+                </button>
+                <button id="btnReset" class="bg-white/20 hover:bg-white/30 text-white font-semibold px-3 py-2 rounded-xl transition text-sm" title="Đặt lại dữ liệu mô phỏng">
+                    🔄 Làm mới
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Nội dung chính chia 3 cột trực quan -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-5 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+        <!-- CỘT TRÁI (4/12): THIẾT LẬP QUY TẮC ĐIỀU KIỆN TOÁN HỌC -->
+        <section class="lg:col-span-4 flex flex-col gap-4">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                <h2 class="text-base font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-3 mb-4">
+                    <span class="w-7 h-7 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center font-extrabold">1</span>
+                    Thiết lập Thông số &amp; Ngưỡng Toán học
+                </h2>
+
+                <!-- Điều chỉnh độ ẩm hiện tại X (Kiểm thử thủ công) -->
+                <div class="mb-5 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                    <div class="flex justify-between items-center mb-1.5">
+                        <label for="sliderX" class="text-sm font-bold text-slate-700">Độ ẩm đất hiện tại (<span class="text-sky-600">X</span>):</label>
+                        <span id="valX" class="text-lg font-extrabold text-sky-700 bg-sky-100 px-2.5 py-0.5 rounded-lg">45%</span>
+                    </div>
+                    <input type="range" id="sliderX" min="0" max="100" step="1" value="45" class="w-full">
+                    <div class="flex justify-between text-[11px] text-slate-500 mt-1 font-medium">
+                        <span>0% (Khô nứt)</span>
+                        <span>50% (Ẩm vừa)</span>
+                        <span>100% (Sũng nước)</span>
+                    </div>
+                </div>
+
+                <!-- Ngưỡng bật bơm H_min -->
+                <div class="mb-4">
+                    <div class="flex justify-between items-center mb-1">
+                        <label for="sliderHmin" class="text-sm font-semibold text-slate-700">Ngưỡng kích hoạt BẬT bơm (<span class="text-rose-600 font-bold">H<sub>min</sub></span>):</label>
+                        <span id="valHmin" class="text-sm font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md">35%</span>
+                    </div>
+                    <input type="range" id="sliderHmin" min="5" max="85" step="1" value="35" class="w-full">
+                </div>
+
+                <!-- Ngưỡng ngắt bơm H_max -->
+                <div class="mb-4">
+                    <div class="flex justify-between items-center mb-1">
+                        <label for="sliderHmax" class="text-sm font-semibold text-slate-700">Ngưỡng ngắt TẮT bơm (<span class="text-emerald-600 font-bold">H<sub>max</sub></span>):</label>
+                        <span id="valHmax" class="text-sm font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">65%</span>
+                    </div>
+                    <input type="range" id="sliderHmax" min="15" max="95" step="1" value="65" class="w-full">
+                </div>
+
+                <!-- Cảnh báo hiện tượng dao động Bật/Tắt liên tục (Chattering) -->
+                <div id="chatteringAlert" class="hidden mb-4 p-3 rounded-xl bg-amber-50 border-l-4 border-amber-500 text-amber-900 text-xs leading-relaxed">
+                    <div class="font-bold flex items-center gap-1.5 text-amber-800 mb-0.5">
+                        <span>⚠️ CẢNH BÁO DAO ĐỘNG TẮT – BẬT LIÊN TỤC!</span>
+                    </div>
+                    Khoảng trễ <strong>ΔH = H<sub>max</sub> - H<sub>min</sub></strong> quá nhỏ (≤ 5%). Trong thực tế, mạch Relay sẽ đóng/ngắt liên tục gây cháy tiếp điểm và hỏng máy bơm mini!
+                </div>
+
+                <!-- Thông số phần cứng thực tế (Lưu lượng bơm Q & Hệ số thấm) -->
+                <div class="grid grid-cols-2 gap-3 pt-3 border-t border-slate-100">
+                    <div>
+                        <label for="inputQ" class="block text-xs font-semibold text-slate-600 mb-1">Lưu lượng bơm Q (ml/s)</label>
+                        <input type="number" id="inputQ" min="5" max="100" value="20" class="w-full px-3 py-1.5 text-sm font-bold border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 outline-none">
+                    </div>
+                    <div>
+                        <label for="inputRate" class="block text-xs font-semibold text-slate-600 mb-1">100ml nước tăng (% ẩm)</label>
+                        <input type="number" id="inputRate" min="2" max="50" value="15" class="w-full px-3 py-1.5 text-sm font-bold border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 outline-none">
+                    </div>
+                </div>
+            </div>
+
+            <!-- HỘP QUY TẮC ĐIỀU KIỆN LOGIC TOÁN HỌC (IF - THEN - ELSE) -->
+            <div class="bg-slate-900 text-slate-100 rounded-2xl shadow-md p-5 border border-slate-800">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-sky-400 flex items-center gap-2 mb-3">
+                    <span>📐</span> Mệnh đề Điều kiện Toán học (Nếu – Thì)
+                </h3>
+                <div class="space-y-2.5 text-xs sm:text-sm font-mono">
+                    <!-- Điều kiện 1: Bật bơm -->
+                    <div id="ruleOn" class="p-2.5 rounded-xl border border-slate-700 bg-slate-800/60 transition-all duration-200">
+                        <span class="text-rose-400 font-bold">NẾU</span> X &lt; <span class="rule-hmin font-bold text-rose-300">35</span>% <span class="text-rose-400 font-bold">THÌ</span><br>
+                        <span class="pl-4 text-emerald-300">→ BẬT BƠM (Relay: ON)</span>
+                    </div>
+
+                    <!-- Điều kiện 2: Vùng trễ an toàn -->
+                    <div id="ruleHold" class="p-2.5 rounded-xl border border-slate-700 bg-slate-800/60 transition-all duration-200">
+                        <span class="text-amber-400 font-bold">NẾU</span> <span class="rule-hmin font-bold text-amber-300">35</span>% ≤ X &lt; <span class="rule-hmax font-bold text-amber-300">65</span>% <span class="text-amber-400 font-bold">THÌ</span><br>
+                        <span class="pl-4 text-slate-300">→ GIỮ TRẠNG THÁI (Vùng trễ an toàn)</span>
+                    </div>
+
+                    <!-- Điều kiện 3: Ngắt bơm -->
+                    <div id="ruleOff" class="p-2.5 rounded-xl border border-slate-700 bg-slate-800/60 transition-all duration-200">
+                        <span class="text-sky-400 font-bold">NẾU</span> X ≥ <span class="rule-hmax font-bold text-sky-300">65</span>% <span class="text-sky-400 font-bold">THÌ</span><br>
+                        <span class="pl-4 text-rose-300">→ NGẮT BƠM (Relay: OFF)</span>
+                    </div>
+                </div>
+
+                <!-- Công thức tính toán định lượng -->
+                <div class="mt-4 pt-3 border-t border-slate-700/80 text-xs text-slate-300 space-y-1">
+                    <div class="flex justify-between">
+                        <span>Lượng nước bù 1 chu kỳ (V):</span>
+                        <span id="calcV" class="font-bold text-emerald-400">200 ml</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Thời gian bơm dự kiến (t = V/Q):</span>
+                        <span id="calcT" class="font-bold text-sky-400">10.0 giây</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CỘT GIỮA (4/12): MÔ HÌNH TRỰC QUAN HỆ THỐNG LINH KIỆN -->
+        <section class="lg:col-span-4 flex flex-col gap-4">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex-1 flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
+                        <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                            <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-extrabold">2</span>
+                            Mô hình Trực quan Hệ thống
+                        </h2>
+                        <span id="statusBadge" class="px-3 py-1 rounded-full text-xs font-extrabold bg-slate-100 text-slate-700">
+                            ĐANG CHỜ
+                        </span>
+                    </div>
+
+                    <!-- Khung vẽ SVG Mô hình Hệ thống Tưới Thông Minh -->
+                    <div class="relative bg-gradient-to-b from-sky-50 to-slate-100 rounded-2xl border border-slate-200 p-3 flex items-center justify-center overflow-hidden">
+                        <svg viewBox="0 0 360 280" class="w-full h-auto max-h-[290px]" aria-label="Mô hình hệ thống tưới cây thông minh">
+                            <!-- Nền mặt bàn -->
+                            <rect x="10" y="255" width="340" height="12" rx="6" fill="#cbd5e1" />
+
+                            <!-- Bình chứa nước & Máy bơm mini 5V -->
+                            <g transform="translate(22, 145)">
+                                <!-- Bình nước -->
+                                <rect x="0" y="15" width="68" height="95" rx="8" fill="#e0f2fe" stroke="#0284c7" stroke-width="2.5" />
+                                <!-- Mực nước trong bình -->
+                                <rect x="3" y="35" width="62" height="72" rx="5" fill="#38bdf8" opacity="0.65" />
+                                <text x="34" y="10" text-anchor="middle" font-size="10" font-weight="700" fill="#0369a1">BÌNH NƯỚC</text>
+                                <!-- Máy bơm chìm mini 5V -->
+                                <rect x="14" y="72" width="40" height="28" rx="5" fill="#334155" />
+                                <circle id="pumpImpeller" cx="34" cy="86" r="7" fill="#94a3b8" />
+                                <text x="34" y="90" text-anchor="middle" font-size="8" font-weight="800" fill="#ffffff">5V</text>
+                            </g>
+
+                            <!-- Ống dẫn nước từ bơm lên chậu cây -->
+                            <path d="M 56 217 L 56 65 Q 56 50 71 50 L 215 50 Q 225 50 225 62 L 225 78" fill="none" stroke="#94a3b8" stroke-width="7" stroke-linecap="round" />
+                            <path id="waterPipeFlow" d="M 56 217 L 56 65 Q 56 50 71 50 L 215 50 Q 225 50 225 62 L 225 78" fill="none" stroke="#0ea5e9" stroke-width="4" stroke-linecap="round" opacity="0" />
+
+                            <!-- Giọt nước phun ra từ đầu ống khi bơm bật -->
+                            <g id="waterDropsGroup" opacity="0">
+                                <circle cx="220" cy="86" r="3.5" fill="#0284c7" class="water-drop" />
+                                <circle cx="230" cy="88" r="3.5" fill="#38bdf8" class="water-drop-delay" />
+                                <circle cx="225" cy="94" r="3" fill="#0284c7" class="water-drop" />
+                            </g>
+
+                            <!-- Module Relay 1 kênh 5V -->
+                            <g transform="translate(105, 82)">
+                                <rect x="0" y="0" width="76" height="48" rx="8" fill="#1e293b" stroke="#475569" stroke-width="2" />
+                                <text x="38" y="16" text-anchor="middle" font-size="9" font-weight="700" fill="#f8fafc">RELAY 5V</text>
+                                <!-- Đèn LED trạng thái Relay -->
+                                <circle id="relayLed" cx="22" cy="31" r="6" fill="#ef4444" />
+                                <text id="relayStateText" x="48" y="34" text-anchor="middle" font-size="10" font-weight="800" fill="#fca5a5">OFF</text>
+                            </g>
+
+                            <!-- Dây tín hiệu từ Cảm biến về Relay -->
+                            <path d="M 278 140 L 278 106 L 181 106" fill="none" stroke="#eab308" stroke-width="2.5" stroke-dasharray="4 3" />
+                            <!-- Dây điều khiển từ Relay tới Bơm -->
+                            <path d="M 105 115 L 76 115 L 76 215" fill="none" stroke="#ef4444" stroke-width="2" />
+
+                            <!-- Chậu cây xanh & Đất trồng -->
+                            <g transform="translate(175, 115)">
+                                <!-- Thân cây -->
+                                <path id="plantStem" d="M 65 75 Q 65 45 65 25" fill="none" stroke="#15803d" stroke-width="5" stroke-linecap="round" />
+                                <!-- Lá cây trái & phải -->
+                                <path id="leafLeft" d="M 65 48 Q 38 35 32 52 Q 48 60 65 48 Z" fill="#22c55e" />
+                                <path id="leafRight" d="M 65 38 Q 92 25 98 42 Q 82 50 65 38 Z" fill="#16a34a" />
+                                <path id="leafTop" d="M 65 26 Q 52 5 65 0 Q 78 5 65 26 Z" fill="#4ade80" />
+
+                                <!-- Lớp đất đổi màu theo độ ẩm -->
+                                <polygon id="soilPolygon" points="14,75 116,75 110,95 20,95" fill="#92400e" />
+
+                                <!-- Chậu trồng cây -->
+                                <polygon points="10,75 120,75 106,140 24,140" fill="#d97706" stroke="#b45309" stroke-width="2.5" />
+                                <rect x="6" y="68" width="118" height="10" rx="4" fill="#f59e0b" stroke="#b45309" stroke-width="2" />
+
+                                <!-- Cảm biến độ ẩm đất cắm vào chậu -->
+                                <g transform="translate(88, 25)">
+                                    <!-- Hai chân dò cắm vào đất -->
+                                    <rect x="6" y="32" width="4" height="36" rx="1" fill="#cbd5e1" />
+                                    <rect x="14" y="32" width="4" height="36" rx="1" fill="#cbd5e1" />
+                                    <!-- Mạch đầu cảm biến -->
+                                    <rect x="0" y="0" width="24" height="34" rx="4" fill="#0284c7" stroke="#0369a1" stroke-width="1.5" />
+                                    <text x="12" y="13" text-anchor="middle" font-size="7" font-weight="700" fill="#ffffff">CẢM</text>
+                                    <text x="12" y="22" text-anchor="middle" font-size="7" font-weight="700" fill="#ffffff">BIẾN</text>
+                                </g>
+                            </g>
+
+                            <!-- Bảng hiển thị trạng thái sinh lý cây -->
+                            <g transform="translate(185, 222)">
+                                <rect x="0" y="0" width="110" height="24" rx="6" fill="#0f172a" opacity="0.85" />
+                                <text id="plantStatusSvg" x="55" y="15" text-anchor="middle" font-size="10" font-weight="700" fill="#4ade80">Đất ẩm tối ưu</text>
+                            </g>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Thống kê Hiệu quả Vận hành & Tiết kiệm Nước -->
+                <div class="grid grid-cols-3 gap-2.5 mt-4">
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-center">
+                        <div class="text-[11px] font-semibold text-slate-500">Số lần bật bơm</div>
+                        <div id="statCycles" class="text-lg font-extrabold text-slate-800 mt-0.5">0</div>
+                    </div>
+                    <div class="bg-sky-50 border border-sky-200 rounded-xl p-2.5 text-center">
+                        <div class="text-[11px] font-semibold text-sky-700">Tổng nước tưới</div>
+                        <div id="statTotalWater" class="text-lg font-extrabold text-sky-800 mt-0.5">0 ml</div>
+                    </div>
+                    <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 text-center">
+                        <div class="text-[11px] font-semibold text-emerald-700">Thời gian chạy</div>
+                        <div id="statTotalTime" class="text-lg font-extrabold text-emerald-800 mt-0.5">0.0 s</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CỘT PHẢI (4/12): BIỂU ĐỒ ĐOẠN THẲNG & NHẬT KÝ DỮ LIỆU -->
+        <section class="lg:col-span-4 flex flex-col gap-4">
+            <!-- Biểu đồ đoạn thẳng biến thiên độ ẩm -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
+                    <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                        <span class="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center font-extrabold">3</span>
+                        Biểu đồ Biến thiên Độ ẩm X (%)
+                    </h2>
+                    <span class="text-xs font-semibold text-slate-500">Thời gian thực</span>
+                </div>
+
+                <div class="relative w-full h-56 bg-slate-50 rounded-xl border border-slate-200 p-2">
+                    <canvas id="humidityChart" class="w-full h-full block"></canvas>
+                </div>
+
+                <!-- Chú thích biểu đồ -->
+                <div class="flex flex-wrap items-center justify-center gap-4 mt-3 text-xs font-semibold text-slate-600">
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-3 h-0.5 bg-sky-600 inline-block"></span>
+                        <span>Độ ẩm X (%)</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-3 h-0.5 border-t-2 border-dashed border-emerald-600 inline-block"></span>
+                        <span>Ngưỡng tắt H<sub>max</sub></span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-3 h-0.5 border-t-2 border-dashed border-rose-600 inline-block"></span>
+                        <span>Ngưỡng bật H<sub>min</sub></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Nhật ký các chu kỳ kích hoạt bơm tự động -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex-1 flex flex-col">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-2.5 mb-2.5">
+                    <h3 class="text-sm font-bold text-slate-800">📋 Nhật ký Kích hoạt Tưới tự động</h3>
+                    <span class="text-[11px] text-slate-500">Ghi nhận tự động</span>
+                </div>
+                <div class="overflow-y-auto max-h-44 flex-1 border border-slate-100 rounded-xl">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead class="bg-slate-100 text-slate-600 sticky top-0">
+                            <tr>
+                                <th class="py-2 px-2.5 font-bold">Lần</th>
+                                <th class="py-2 px-2.5 font-bold">Độ ẩm</th>
+                                <th class="py-2 px-2.5 font-bold">Nước (V)</th>
+                                <th class="py-2 px-2.5 font-bold">Thời gian</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logTableBody" class="divide-y divide-slate-100 text-slate-700">
+                            <tr>
+                                <td colspan="4" class="py-4 text-center text-slate-400 italic">
+                                    Kéo độ ẩm X xuống dưới H<sub>min</sub> hoặc bấm "Chạy tự động" để ghi dữ liệu...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Chân trang hướng dẫn ngắn cho học sinh -->
+    <footer class="bg-white border-t border-slate-200 py-3 px-4 text-center text-xs text-slate-500">
+        💡 <strong>Gợi ý thực hành Toán 8:</strong> Thử đặt <code class="bg-slate-100 px-1.5 py-0.5 rounded text-slate-700">H_min = 48%</code> và <code class="bg-slate-100 px-1.5 py-0.5 rounded text-slate-700">H_max = 50%</code> rồi bật <em>Chạy tự động</em> để quan sát hiện tượng máy bơm đóng/ngắt liên tục gây hại thiết bị!
+    </footer>
+
+    <script>
+        // --- TRẠNG THÁI MÔ PHỎNG ---
+        const state = {
+            X: 45,              // Độ ẩm hiện tại (%)
+            Hmin: 35,           // Ngưỡng kích hoạt bật bơm (%)
+            Hmax: 65,           // Ngưỡng ngắt bơm (%)
+            Q: 20,              // Lưu lượng máy bơm mini (ml/giây)
+            ratePer100ml: 15,   // 100ml nước làm tăng bao nhiêu % độ ẩm
+            isPumpOn: false,    // Trạng thái máy bơm (Relay ON/OFF)
+            isAutoRunning: false, // Trạng thái chạy mô phỏng thời gian thực
+            timeElapsed: 0,     // Thời gian mô phỏng (giây)
+            cycles: 0,          // Số lần bật bơm
+            totalWater: 0,      // Tổng lượng nước tưới (ml)
+            totalPumpTime: 0,   // Tổng thời gian bơm hoạt động (giây)
+            currentCycleStartX: null,
+            currentCycleWater: 0,
+            currentCycleTime: 0,
+            history: []         // Mảng lưu lịch sử vẽ biểu đồ {t, x}
+        };
+
+        // --- THAM CHIẾU DOM ---
+        const sliderX = document.getElementById('sliderX');
+        const sliderHmin = document.getElementById('sliderHmin');
+        const sliderHmax = document.getElementById('sliderHmax');
+        const inputQ = document.getElementById('inputQ');
+        const inputRate = document.getElementById('inputRate');
+
+        const valX = document.getElementById('valX');
+        const valHmin = document.getElementById('valHmin');
+        const valHmax = document.getElementById('valHmax');
+        const chatteringAlert = document.getElementById('chatteringAlert');
+
+        const ruleOn = document.getElementById('ruleOn');
+        const ruleHold = document.getElementById('ruleHold');
+        const ruleOff = document.getElementById('ruleOff');
+        const calcV = document.getElementById('calcV');
+        const calcT = document.getElementById('calcT');
+
+        const statusBadge = document.getElementById('statusBadge');
+        const waterPipeFlow = document.getElementById('waterPipeFlow');
+        const waterDropsGroup = document.getElementById('waterDropsGroup');
+        const relayLed = document.getElementById('relayLed');
+        const relayStateText = document.getElementById('relayStateText');
+        const soilPolygon = document.getElementById('soilPolygon');
+        const plantStatusSvg = document.getElementById('plantStatusSvg');
+        const leafLeft = document.getElementById('leafLeft');
+        const leafRight = document.getElementById('leafRight');
+        const leafTop = document.getElementById('leafTop');
+
+        const statCycles = document.getElementById('statCycles');
+        const statTotalWater = document.getElementById('statTotalWater');
+        const statTotalTime = document.getElementById('statTotalTime');
+        const logTableBody = document.getElementById('logTableBody');
+
+        const btnToggleAuto = document.getElementById('btnToggleAuto');
+        const autoIcon = document.getElementById('autoIcon');
+        const autoText = document.getElementById('autoText');
+        const btnReset = document.getElementById('btnReset');
+
+        const canvas = document.getElementById('humidityChart');
+        const ctx = canvas.getContext('2d');
+
+        // --- KHỞI TẠO DỮ LIỆU BAN ĐẦU ---
+        function initHistory() {
+            state.history = [];
+            for (let i = 0; i <= 10; i++) {
+                state.history.push({ t: i, x: state.X });
+            }
+            state.timeElapsed = 10;
+        }
+
+        // --- LOGIC ĐIỀU KHIỂN NẾU - THÌ (HYSTERESIS) ---
+        function evaluatePumpLogic() {
+            const wasOn = state.isPumpOn;
+
+            if (state.X < state.Hmin) {
+                state.isPumpOn = true;
+            } else if (state.X >= state.Hmax) {
+                state.isPumpOn = false;
+            }
+            // Nếu Hmin <= X < Hmax: giữ nguyên trạng thái state.isPumpOn (Vùng trễ an toàn)
+
+            // Ghi nhận khi bắt đầu chu kỳ bật bơm mới
+            if (!wasOn && state.isPumpOn) {
+                state.cycles++;
+                state.currentCycleStartX = Math.round(state.X);
+                state.currentCycleWater = 0;
+                state.currentCycleTime = 0;
+            }
+
+            // Ghi nhận vào bảng nhật ký khi bơm vừa tắt sau một chu kỳ tưới
+            if (wasOn && !state.isPumpOn && state.currentCycleStartX !== null) {
+                addLogEntry(
+                    state.cycles,
+                    state.currentCycleStartX,
+                    Math.round(state.X),
+                    Math.round(state.currentCycleWater),
+                    state.currentCycleTime.toFixed(1)
+                );
+                state.currentCycleStartX = null;
+            }
+        }
+
+        // --- THÊM DÒNG VÀO BẢNG NHẬT KÝ ---
+        function addLogEntry(cycleNum, xBefore, xAfter, waterMl, timeSec) {
+            if (cycleNum === 1) {
+                logTableBody.innerHTML = '';
+            }
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-sky-50 transition';
+            row.innerHTML = `
+                <td class="py-2 px-2.5 font-bold text-slate-800">#${cycleNum}</td>
+                <td class="py-2 px-2.5"><span class="text-rose-600 font-semibold">${xBefore}%</span> → <span class="text-emerald-600 font-semibold">${xAfter}%</span></td>
+                <td class="py-2 px-2.5 font-bold text-sky-700">${waterMl} ml</td>
+                <td class="py-2 px-2.5 text-slate-600">${timeSec} s</td>
+            `;
+            logTableBody.prepend(row);
+        }
+
+        // --- CẬP NHẬT GIAO DIỆN & TÍNH TOÁN TOÁN HỌC ---
+        function updateUI() {
+            const roundedX = Math.round(state.X);
+            valX.textContent = `${roundedX}%`;
+            sliderX.value = roundedX;
+            valHmin.textContent = `${state.Hmin}%`;
+            valHmax.textContent = `${state.Hmax}%`;
+
+            // Cập nhật các số trong hộp quy tắc điều kiện
+            document.querySelectorAll('.rule-hmin').forEach(el => el.textContent = state.Hmin);
+            document.querySelectorAll('.rule-hmax').forEach(el => el.textContent = state.Hmax);
+
+            // Cảnh báo dao động tắt-bật liên tục nếu Hmax - Hmin <= 5%
+            if (state.Hmax - state.Hmin <= 5) {
+                chatteringAlert.classList.remove('hidden');
+            } else {
+                chatteringAlert.classList.add('hidden');
+            }
+
+            // Tính toán lượng nước V cần bù từ Hmin lên Hmax và thời gian t = V / Q
+            const deltaH = Math.max(0, state.Hmax - state.Hmin);
+            const neededV = Math.round((deltaH / state.ratePer100ml) * 100);
+            const neededT = state.Q > 0 ? (neededV / state.Q).toFixed(1) : 0;
+            calcV.textContent = `${neededV} ml`;
+            calcT.textContent = `${neededT} giây`;
+
+            // Làm nổi bật mệnh đề điều kiện đang kích hoạt
+            ruleOn.classList.remove('ring-2', 'ring-rose-500', 'bg-rose-950/50');
+            ruleHold.classList.remove('ring-2', 'ring-amber-400', 'bg-amber-950/40');
+            ruleOff.classList.remove('ring-2', 'ring-sky-400', 'bg-sky-950/50');
+
+            if (state.X < state.Hmin) {
+                ruleOn.classList.add('ring-2', 'ring-rose-500', 'bg-rose-950/50');
+            } else if (state.X >= state.Hmax) {
+                ruleOff.classList.add('ring-2', 'ring-sky-400', 'bg-sky-950/50');
+            } else {
+                ruleHold.classList.add('ring-2', 'ring-amber-400', 'bg-amber-950/40');
+            }
+
+            // Cập nhật trạng thái mô hình trực quan (Relay, Bơm, Dòng nước)
+            if (state.isPumpOn) {
+                statusBadge.textContent = '🟢 ĐANG TƯỚI (BƠM BẬT)';
+                statusBadge.className = 'px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 animate-pulse';
+                relayLed.setAttribute('fill', '#22c55e');
+                relayStateText.textContent = 'ON';
+                relayStateText.setAttribute('fill', '#86efac');
+                waterPipeFlow.setAttribute('opacity', '1');
+                waterPipeFlow.classList.add('water-flowing');
+                waterDropsGroup.setAttribute('opacity', '1');
+            } else {
+                statusBadge.textContent = '🔴 ĐÃ NGẮT (BƠM TẮT)';
+                statusBadge.className = 'px-3 py-1 rounded-full text-xs font-extrabold bg-slate-100 text-slate-700';
+                relayLed.setAttribute('fill', '#ef4444');
+                relayStateText.textContent = 'OFF';
+                relayStateText.setAttribute('fill', '#fca5a5');
+                waterPipeFlow.setAttribute('opacity', '0');
+                waterPipeFlow.classList.remove('water-flowing');
+                waterDropsGroup.setAttribute('opacity', '0');
+            }
+
+            // Cập nhật màu sắc đất và sức sống cây theo độ ẩm X
+            if (state.X < 25) {
+                soilPolygon.setAttribute('fill', '#d6b88d'); // Đất khô nứt màu sáng
+                plantStatusSvg.textContent = '⚠️ Đất khô hạn!';
+                plantStatusSvg.setAttribute('fill', '#fca5a5');
+                leafLeft.setAttribute('fill', '#eab308');
+                leafRight.setAttribute('fill', '#ca8a04');
+                leafTop.setAttribute('fill', '#facc15');
+            } else if (state.X <= 75) {
+                soilPolygon.setAttribute('fill', '#78350f'); // Đất ẩm nâu đậm
+                plantStatusSvg.textContent = '✅ Đất ẩm tối ưu';
+                plantStatusSvg.setAttribute('fill', '#4ade80');
+                leafLeft.setAttribute('fill', '#22c55e');
+                leafRight.setAttribute('fill', '#16a34a');
+                leafTop.setAttribute('fill', '#4ade80');
+            } else {
+                soilPolygon.setAttribute('fill', '#1e3a8a'); // Đất sũng nước
+                plantStatusSvg.textContent = '💧 Đất dư nước!';
+                plantStatusSvg.setAttribute('fill', '#38bdf8');
+                leafLeft.setAttribute('fill', '#10b981');
+                leafRight.setAttribute('fill', '#059669');
+                leafTop.setAttribute('fill', '#34d399');
+            }
+
+            // Cập nhật số liệu thống kê
+            statCycles.textContent = state.cycles;
+            statTotalWater.textContent = `${Math.round(state.totalWater)} ml`;
+            statTotalTime.textContent = `${state.totalPumpTime.toFixed(1)} s`;
+
+            drawChart();
+        }
+
+        // --- VẼ BIỂU ĐỒ ĐOẠN THẲNG THỜI GIAN THỰC ---
+        function drawChart() {
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) return;
+
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+
+            const w = rect.width;
+            const h = rect.height;
+            const padLeft = 36;
+            const padRight = 14;
+            const padTop = 14;
+            const padBottom = 24;
+            const chartW = w - padLeft - padRight;
+            const chartH = h - padTop - padBottom;
+
+            ctx.clearRect(0, 0, w, h);
+
+            // Chuyển đổi % độ ẩm sang tọa độ Y
+            const getY = (val) => padTop + chartH - (val / 100) * chartH;
+
+            // Vùng ẩm tối ưu giữa Hmin và Hmax (Tô nền xanh nhạt)
+            const yHmax = getY(state.Hmax);
+            const yHmin = getY(state.Hmin);
+            ctx.fillStyle = 'rgba(16, 185, 129, 0.10)';
+            ctx.fillRect(padLeft, yHmax, chartW, yHmin - yHmax);
+
+            // Lưới ngang và nhãn trục Y (0%, 25%, 50%, 75%, 100%)
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 1;
+            ctx.fillStyle = '#64748b';
+            ctx.font = '600 10px Inter, sans-serif';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+
+            [0, 25, 50, 75, 100].forEach(tick => {
+                const y = getY(tick);
+                ctx.beginPath();
+                ctx.moveTo(padLeft, y);
+                ctx.lineTo(w - padRight, y);
+                ctx.stroke();
+                ctx.fillText(`${tick}%`, padLeft - 6, y);
+            });
+
+            // Đường đứt nét ngưỡng Hmax (Xanh lá)
+            ctx.save();
+            ctx.setLineDash([5, 4]);
+            ctx.strokeStyle = '#059669';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(padLeft, yHmax);
+            ctx.lineTo(w - padRight, yHmax);
+            ctx.stroke();
+
+            // Đường đứt nét ngưỡng Hmin (Đỏ cam)
+            ctx.strokeStyle = '#e11d48';
+            ctx.beginPath();
+            ctx.moveTo(padLeft, yHmin);
+            ctx.lineTo(w - padRight, yHmin);
+            ctx.stroke();
+            ctx.restore();
+
+            // Vẽ đường biểu diễn độ ẩm X theo thời gian
+            if (state.history.length > 1) {
+                ctx.strokeStyle = '#0284c7';
+                ctx.lineWidth = 2.5;
+                ctx.lineJoin = 'round';
+                ctx.beginPath();
+
+                state.history.forEach((pt, idx) => {
+                    const x = padLeft + (idx / (state.history.length - 1)) * chartW;
+                    const y = getY(pt.x);
+                    if (idx === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+
+                // Vẽ điểm chốt hiện tại
+                const lastPt = state.history[state.history.length - 1];
+                const lastX = padLeft + chartW;
+                const lastY = getY(lastPt.x);
+                ctx.fillStyle = state.isPumpOn ? '#10b981' : '#0284c7';
+                ctx.beginPath();
+                ctx.arc(lastX, lastY, 4.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            }
+
+            // Nhãn trục X
+            ctx.fillStyle = '#64748b';
+            ctx.textAlign = 'center';
+            ctx.fillText('Thời gian vận hành hệ thống (giây)', padLeft + chartW / 2, h - 8);
+        }
+
+        // --- VÒNG LẶP MÔ PHỎNG THỜI GIAN THỰC (MỖI 0.2 GIÂY) ---
+        setInterval(() => {
+            if (!state.isAutoRunning) return;
+
+            const dt = 0.2; // Bước thời gian 0.2 giây
+            state.timeElapsed += dt;
+
+            if (state.isPumpOn) {
+                // Máy bơm đang bật: Bổ sung nước và tăng độ ẩm đất
+                const waterAdded = state.Q * dt;
+                const humidityGain = (waterAdded / 100) * state.ratePer100ml;
+                state.X = Math.min(100, state.X + humidityGain);
+                state.totalWater += waterAdded;
+                state.totalPumpTime += dt;
+                state.currentCycleWater += waterAdded;
+                state.currentCycleTime += dt;
+            } else {
+                // Máy bơm tắt: Đất bốc hơi nước tự nhiên theo thời gian
+                const evaporationRate = 1.8; // Giảm 1.8% độ ẩm mỗi giây mô phỏng
+                state.X = Math.max(0, state.X - evaporationRate * dt);
+            }
+
+            evaluatePumpLogic();
+
+            state.history.push({ t: state.timeElapsed, x: state.X });
+            if (state.history.length > 50) {
+                state.history.shift();
+            }
+
+            updateUI();
+        }, 200);
+
+        // --- SỰ KIỆN TƯƠNG TÁC NGƯỜI DÙNG ---
+        sliderX.addEventListener('input', (e) => {
+            state.X = parseFloat(e.target.value);
+            evaluatePumpLogic();
+            state.history.push({ t: ++state.timeElapsed, x: state.X });
+            if (state.history.length > 50) state.history.shift();
+            updateUI();
+        });
+
+        sliderHmin.addEventListener('input', (e) => {
+            let val = parseInt(e.target.value, 10);
+            if (val >= state.Hmax) {
+                val = state.Hmax - 1;
+                sliderHmin.value = val;
+            }
+            state.Hmin = val;
+            evaluatePumpLogic();
+            updateUI();
+        });
+
+        sliderHmax.addEventListener('input', (e) => {
+            let val = parseInt(e.target.value, 10);
+            if (val <= state.Hmin) {
+                val = state.Hmin + 1;
+                sliderHmax.value = val;
+            }
+            state.Hmax = val;
+            evaluatePumpLogic();
+            updateUI();
+        });
+
+        inputQ.addEventListener('change', (e) => {
+            state.Q = Math.max(1, parseFloat(e.target.value) || 20);
+            updateUI();
+        });
+
+        inputRate.addEventListener('change', (e) => {
+            state.ratePer100ml = Math.max(1, parseFloat(e.target.value) || 15);
+            updateUI();
+        });
+
+        btnToggleAuto.addEventListener('click', () => {
+            state.isAutoRunning = !state.isAutoRunning;
+            if (state.isAutoRunning) {
+                autoIcon.textContent = '⏸️';
+                autoText.textContent = 'Tạm dừng mô phỏng';
+                btnToggleAuto.classList.replace('bg-amber-400', 'bg-rose-500');
+                btnToggleAuto.classList.replace('hover:bg-amber-300', 'hover:bg-rose-400');
+                btnToggleAuto.classList.replace('text-slate-950', 'text-white');
+            } else {
+                autoIcon.textContent = '▶️';
+                autoText.textContent = 'Chạy tự động (Bốc hơi thực tế)';
+                btnToggleAuto.classList.replace('bg-rose-500', 'bg-amber-400');
+                btnToggleAuto.classList.replace('hover:bg-rose-400', 'hover:bg-amber-300');
+                btnToggleAuto.classList.replace('text-white', 'text-slate-950');
+            }
+        });
+
+        btnReset.addEventListener('click', () => {
+            state.isAutoRunning = false;
+            autoIcon.textContent = '▶️';
+            autoText.textContent = 'Chạy tự động (Bốc hơi thực tế)';
+            btnToggleAuto.className = 'flex items-center gap-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold px-4 py-2 rounded-xl shadow transition text-sm';
+
+            state.X = 45;
+            state.Hmin = 35;
+            state.Hmax = 65;
+            state.Q = 20;
+            state.ratePer100ml = 15;
+            state.isPumpOn = false;
+            state.cycles = 0;
+            state.totalWater = 0;
+            state.totalPumpTime = 0;
+            state.currentCycleStartX = null;
+
+            sliderX.value = 45;
+            sliderHmin.value = 35;
+            sliderHmax.value = 65;
+            inputQ.value = 20;
+            inputRate.value = 15;
+
+            logTableBody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="py-4 text-center text-slate-400 italic">
+                        Kéo độ ẩm X xuống dưới H<sub>min</sub> hoặc bấm "Chạy tự động" để ghi dữ liệu...
+                    </td>
+                </tr>
+            `;
+
+            initHistory();
+            updateUI();
+        });
+
+        window.addEventListener('resize', drawChart);
+
+        // Khởi chạy ban đầu
+        window.onload = () => {
+            initHistory();
+            evaluatePumpLogic();
+            updateUI();
+        };
+    </script>
+</body>
+</html>
